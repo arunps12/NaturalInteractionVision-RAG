@@ -1,3 +1,7 @@
 pandas
 numpy
 kagglehub
+torch
+opencv-python-headless
+torchvision
+matplotlib
