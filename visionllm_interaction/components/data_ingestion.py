@@ -1,10 +1,7 @@
 import os
-import sys
-import json
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
 
 import kagglehub
 
@@ -20,14 +17,8 @@ class DataIngestion:
     """
     Data ingestion for COCO .
 
-    What this component does:
-    1) Download dataset via kagglehub (to kaggle cache path)
-    2) Ensure raw COCO structure exists under config.raw_data_dir (data/raw)
-       - If downloaded is a zip, extract it
-       - If downloaded is a folder, copy required COCO dirs/files into data/raw
-    3) Validate that expected raw paths exist
-    4) Write artifacts/data_ingestion/data_manifest.yaml
-    5) Return DataIngestionArtifact
+    Write artifacts/<timestamp>/data_ingestion/data_manifest.yaml
+    Return DataIngestionArtifact
     """
 
     def __init__(self, data_ingestion_config: DataIngestionConfig):
@@ -49,9 +40,7 @@ class DataIngestion:
         os.makedirs(dir_path, exist_ok=True)
 
     def _extract_zip(self, zip_path: str, extract_to: str) -> str:
-        """
-        Extract zip_path into extract_to and return extract_to.
-        """
+        """Extract zip_path into extract_to and return extract_to."""
         try:
             self._safe_mkdir(extract_to)
             logger.info(f"Extracting zip: {zip_path} -> {extract_to}")
@@ -64,26 +53,31 @@ class DataIngestion:
     def _find_coco_root(self, base_dir: str) -> str:
         """
         Locate the COCO root directory under base_dir.
-
         Returns the path to the detected COCO root.
         """
         try:
             base = Path(base_dir)
 
-            
-            if (base / Path(self.config.raw_train_image_dir).name).exists() and (base / "annotations").exists():
+            train_dirname = Path(self.config.raw_train_image_dir).name  # "train2017"
+
+            # Direct match
+            if (base / train_dirname).exists() and (base / "annotations").exists():
                 return str(base)
 
-            
-            candidates = [base] + [p for p in base.glob("*") if p.is_dir()] + [p for p in base.glob("*/*") if p.is_dir()]
-            train_dirname = Path(self.config.raw_train_image_dir).name  # "train2017"
+            # Check one and two levels deep
+            candidates = (
+                [base]
+                + [p for p in base.glob("*") if p.is_dir()]
+                + [p for p in base.glob("*/*") if p.is_dir()]
+            )
 
             for c in candidates:
                 if (c / train_dirname).exists() and (c / "annotations").exists():
                     return str(c)
 
             raise CustomException(
-                f"Could not locate COCO root under: {base_dir}. Expected folders like '{train_dirname}/' and 'annotations/'."
+                f"Could not locate COCO root under: {base_dir}. "
+                f"Expected folders like '{train_dirname}/' and 'annotations/'."
             )
         except CustomException:
             raise
@@ -91,39 +85,38 @@ class DataIngestion:
             raise CustomException("Failed while locating COCO root directory", e)
 
     def _copytree_if_missing(self, src: str, dst: str) -> None:
-        """
-        Copy a directory tree if dst doesn't exist.
-        """
+        """Copy a directory tree if dst doesn't exist."""
         if os.path.exists(dst):
             logger.info(f"Raw path already exists (skip copy): {dst}")
             return
         import shutil
+
         logger.info(f"Copying: {src} -> {dst}")
         shutil.copytree(src, dst)
 
     def _copyfile_if_missing(self, src: str, dst: str) -> None:
-        """
-        Copy a file if dst doesn't exist.
-        """
+        """Copy a file if dst doesn't exist."""
         if os.path.exists(dst):
             logger.info(f"Raw file already exists (skip copy): {dst}")
             return
         import shutil
+
         self._safe_mkdir(os.path.dirname(dst))
         logger.info(f"Copying: {src} -> {dst}")
         shutil.copy2(src, dst)
 
     def _prepare_raw_data_dir(self, downloaded_path: str) -> None:
         """
-        Ensures config.raw_data_dir contains the expected COCO structure.
-        - If downloaded_path is a zip, extract it first
+        Ensures config.raw_data_dir contains the expected COCO train/val + annotations.
+        - If downloaded_path is a zip, extract it into scratch temp
         - Locate COCO root
-        - Copy required dirs/files into raw_data_dir
+        - Copy only required dirs/files into raw_data_dir (train2017, val2017 if present, annotations/)
         """
         try:
+            # Ensure scratch raw root exists
             self._safe_mkdir(self.config.raw_data_dir)
 
-           
+            # If zip, extract into a temp folder under scratch raw
             working_dir = downloaded_path
             if self._is_zip(downloaded_path):
                 tmp_dir = os.path.join(self.config.raw_data_dir, "_tmp_extract")
@@ -132,7 +125,6 @@ class DataIngestion:
             coco_root = self._find_coco_root(working_dir)
             logger.info(f"Detected COCO root: {coco_root}")
 
-           
             train_dirname = Path(self.config.raw_train_image_dir).name  # train2017
             val_dirname = Path(self.config.raw_val_image_dir).name      # val2017
 
@@ -140,37 +132,42 @@ class DataIngestion:
             src_val = os.path.join(coco_root, val_dirname)
             src_ann_dir = os.path.join(coco_root, "annotations")
 
+            # Destination (on /scratch)
             dst_train = self.config.raw_train_image_dir
             dst_val = self.config.raw_val_image_dir
             dst_ann_dir = self.config.raw_annotation_dir
 
-            # Copy directories to raw (if not already present)
+            # ---- Required: train + annotations ----
             if not os.path.exists(src_train):
                 raise CustomException(f"Missing expected folder in dataset: {src_train}")
             if not os.path.exists(src_ann_dir):
                 raise CustomException(f"Missing expected folder in dataset: {src_ann_dir}")
 
+            # Copy only train2017
             self._copytree_if_missing(src_train, dst_train)
 
-            
+            # Copy val2017 only if present 
             if os.path.exists(src_val):
                 self._copytree_if_missing(src_val, dst_val)
             else:
                 logger.warning(f"val images folder not found at: {src_val} (continuing)")
 
+            # Copy annotations directory (contains instances_*.json etc.)
             self._copytree_if_missing(src_ann_dir, dst_ann_dir)
 
-            # Copy annotation files
+            # ---- Ensure required annotation exists (train) ----
             if not os.path.exists(self.config.raw_train_annotation_file):
                 raise CustomException(
-                    f"Train annotation file not found: {self.config.raw_train_annotation_file}"
-                )
-            if not os.path.exists(self.config.raw_val_annotation_file):
-                logger.warning(
-                    f"Val annotation file not found: {self.config.raw_val_annotation_file} (continuing)"
+                    f"Train annotation file not found after staging: {self.config.raw_train_annotation_file}"
                 )
 
-            logger.info("Raw COCO data is prepared under: %s", self.config.raw_data_dir)
+            # Warn if val annotation is missing
+            if not os.path.exists(self.config.raw_val_annotation_file):
+                logger.warning(
+                    f"Val annotation file not found after staging: {self.config.raw_val_annotation_file} (continuing)"
+                )
+
+            logger.info("Raw COCO train/val data prepared under: %s", self.config.raw_data_dir)
 
         except CustomException:
             raise
@@ -178,9 +175,7 @@ class DataIngestion:
             raise CustomException("Failed to prepare raw COCO directory", e)
 
     def _validate_raw_paths(self) -> None:
-        """
-        Validate that required raw paths exist.
-        """
+        """Validate that required raw paths exist."""
         try:
             required_dirs = [
                 self.config.raw_data_dir,
@@ -199,7 +194,7 @@ class DataIngestion:
                 if not os.path.exists(f):
                     raise CustomException(f"Required file does not exist: {f}")
 
-           
+            #  warnings
             if not os.path.exists(self.config.raw_val_image_dir):
                 logger.warning(f"Validation: val image dir missing: {self.config.raw_val_image_dir}")
 
@@ -214,9 +209,7 @@ class DataIngestion:
             raise CustomException("Failed to validate raw dataset paths", e)
 
     def _write_manifest(self) -> None:
-        """
-        Write a simple YAML manifest consumed by downstream stages.
-        """
+        """Write YAML manifest consumed by downstream stages."""
         try:
             self._safe_mkdir(self.config.data_ingestion_dir)
 
@@ -224,21 +217,20 @@ class DataIngestion:
             created_at = datetime.now().isoformat()
 
             
-            yaml_text = f"""dataset:
-  name: coco2017
-  source: kagglehub
-  created_at: "{created_at}"
+            yaml_text = f"""dataset_name: "{self.config.dataset_name}"
+dataset_format: "{self.config.dataset_format}"
+created_at: "{created_at}"
 
 ingestion:
   mode: "{self.config.ingestion_mode}"
 
-raw:
-  root_dir: "{self.config.raw_data_dir}"
-  train_images_dir: "{self.config.raw_train_image_dir}"
-  val_images_dir: "{self.config.raw_val_image_dir}"
-  annotation_dir: "{self.config.raw_annotation_dir}"
-  train_annotation_file: "{self.config.raw_train_annotation_file}"
-  val_annotation_file: "{self.config.raw_val_annotation_file}"
+paths:
+  train_images: "{self.config.raw_train_image_dir}"
+  val_images: "{self.config.raw_val_image_dir}"
+
+annotations:
+  train: "{self.config.raw_train_annotation_file}"
+  val: "{self.config.raw_val_annotation_file}"
 """
 
             with open(manifest_path, "w", encoding="utf-8") as f:
@@ -253,23 +245,24 @@ raw:
     # Main entry
     # ----------------------------------------------------------------------
     def initiate_data_ingestion(self) -> DataIngestionArtifact:
-        """
-        Main ingestion entrypoint.
-        """
+        """Main ingestion entrypoint."""
         try:
-            logger.info("===== Data Ingestion Started (COCO, register-only) =====")
+            logger.info("===== Data Ingestion Started (COCO train/val only) =====")
 
-            # 1) Download dataset (kagglehub cache path)
+            # Ensure ingestion artifact dir exists
+            self._safe_mkdir(self.config.data_ingestion_dir)
+
+            #  Download dataset (kagglehub cache path)
             downloaded_path = kagglehub.dataset_download(self.config.dataset_name)
             logger.info(f"Downloaded dataset to: {downloaded_path}")
 
-            # 2) Prepare raw data directory (data/raw)
+            # Prepare raw data directory (on /scratch via constants)
             self._prepare_raw_data_dir(downloaded_path)
 
-            # 3) Validate raw paths
+            #  Validate raw paths
             self._validate_raw_paths()
 
-            # 4) Write manifest into artifacts/data_ingestion/
+            #  Write manifest into artifacts/<timestamp>/data_ingestion/
             self._write_manifest()
 
             logger.info("===== Data Ingestion Completed Successfully =====")
@@ -278,6 +271,7 @@ raw:
                 data_ingestion_dir=self.config.data_ingestion_dir,
                 manifest_file_path=self.config.manifest_file_path,
                 ingestion_mode=self.config.ingestion_mode,
+                dataset_format=self.config.dataset_format,
             )
 
         except CustomException:

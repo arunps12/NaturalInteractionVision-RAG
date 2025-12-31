@@ -13,8 +13,9 @@ from visionllm_interaction.constants.training_pipeline import (
     RAW_COCO_TRAIN_ANN_FILE,
     RAW_COCO_VAL_ANN_FILE,
     DATA_INGESTION_MANIFEST_FILE,
-    DATASET_NAME
+    DATASET_NAME,
 )
+
 
 class TrainingPipelineConfig:
     """
@@ -23,28 +24,28 @@ class TrainingPipelineConfig:
     """
 
     def __init__(self, timestamp: datetime = datetime.now()):
-        timestamp = timestamp.strftime("%m_%d_%Y_%H_%M_%S")
+        timestamp_str = timestamp.strftime("%m_%d_%Y_%H_%M_%S")
 
         self.pipeline_name: str = TRAINING_PIPELINE_NAME
         self.artifact_name: str = ARTIFACTS_DIR
-        self.artifact_dir: str = os.path.join(self.artifact_name, timestamp)
+        self.artifact_dir: str = os.path.join(self.artifact_name, timestamp_str)
 
-        self.timestamp: str = timestamp
+        self.timestamp: str = timestamp_str
 
 
 class DataIngestionConfig:
     """
-    Configuration for Data Ingestion stage .
+    Configuration for Data Ingestion stage.
 
-    
-    - Point to RAW COCO dataset (images + annotations)
-    - Define where ingestion artifacts (manifest) are written
+    - Points to RAW COCO dataset staged on /scratch (images + annotations)
+    - Defines where ingestion artifacts (manifest) are written (inside artifacts/<timestamp>/data_ingestion)
     """
 
     def __init__(self, training_pipeline_config: TrainingPipelineConfig):
         
         self.dataset_name: str = DATASET_NAME
-        self.ingestion_mode: str = DATA_INGESTION_MODE  
+        self.ingestion_mode: str = DATA_INGESTION_MODE
+        self.dataset_format: str = "raw"  
 
         # -----------------------------
         # Artifact directory for stage
@@ -55,7 +56,7 @@ class DataIngestionConfig:
         )
 
         # -----------------------------
-        # RAW COCO dataset paths
+        # RAW COCO dataset paths (on /scratch)
         # -----------------------------
         self.raw_data_dir: str = RAW_DATA_DIR
 
