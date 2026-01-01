@@ -5,3 +5,4 @@ torch
 opencv-python-headless
 torchvision
 matplotlib
+pyyaml

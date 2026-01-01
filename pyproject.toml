@@ -6,9 +6,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "kagglehub>=0.3.13",
+    "matplotlib>=3.10.8",
     "numpy>=2.2.6",
     "opencv-python-headless>=4.11.0.86",
     "pandas>=2.3.3",
+    "pyyaml>=6.0.3",
     "torch>=2.9.1",
     "torchvision>=0.24.1",
 ]
