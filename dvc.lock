@@ -1,0 +1,92 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages 
+      data_ingestion
+    deps:
+    - path: src/visionllm_interactionanalysis/config/constants.py
+      hash: md5
+      md5: b2a03a7b233ec119fde360718a7327b8
+      size: 3119
+    - path: src/visionllm_interactionanalysis/config/settings.py
+      hash: md5
+      md5: 33dcde9e2841b310efa58ff66af35840
+      size: 5297
+    - path: src/visionllm_interactionanalysis/detection/data_ingestion.py
+      hash: md5
+      md5: 04440db91d02cc87a8aa71d25289f5b4
+      size: 5527
+    params:
+      params.yaml:
+        data.dataset_name: awsaf49/coco-2017-dataset
+        data.ingestion_mode: register
+    outs:
+    - path: artifacts/dvc/data_ingestion/artifact.json
+      hash: md5
+      md5: e2b6c9be0402f9265a1ae26c118c68fe
+      size: 178
+    - path: artifacts/dvc/data_ingestion/data_manifest.yaml
+      hash: md5
+      md5: d27b5efb6b8c203b86093eaed8804740
+      size: 497
+  data_validation:
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages 
+      data_validation
+    deps:
+    - path: artifacts/dvc/data_ingestion/artifact.json
+      hash: md5
+      md5: e2b6c9be0402f9265a1ae26c118c68fe
+      size: 178
+    - path: configs/schema.yaml
+      hash: md5
+      md5: 65cc0b6969fe2476cc7b8bd5ffbc773a
+      size: 1641
+    - path: src/visionllm_interactionanalysis/detection/data_validation.py
+      hash: md5
+      md5: c3c01603a849a314d816622bd3f8eb94
+      size: 10742
+    params:
+      params.yaml:
+        data.require_val: true
+        validation:
+          drop_invalid_bbox: true
+          max_invalid_bbox_allowed: 100
+    outs:
+    - path: artifacts/dvc/data_validation/artifact.json
+      hash: md5
+      md5: a975d3285c824555de59e65621b28d91
+      size: 149
+    - path: artifacts/dvc/data_validation/data_validation_report.yaml
+      hash: md5
+      md5: 0c5683853ac3e68361f5254b8338f660
+      size: 2918
+  data_transformation:
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages 
+      data_transformation
+    deps:
+    - path: artifacts/dvc/data_ingestion/artifact.json
+      hash: md5
+      md5: e2b6c9be0402f9265a1ae26c118c68fe
+      size: 178
+    - path: artifacts/dvc/data_validation/artifact.json
+      hash: md5
+      md5: a975d3285c824555de59e65621b28d91
+      size: 149
+    - path: src/visionllm_interactionanalysis/detection/data_transformation.py
+      hash: md5
+      md5: 3127a5ada3b82d287a036699aba9bf9b
+      size: 5542
+    outs:
+    - path: artifacts/dvc/data_transformation/annotations
+      hash: md5
+      md5: 53981985c0c2be39733176ca4dd28747.dir
+      size: 551915696
+      nfiles: 2
+    - path: artifacts/dvc/data_transformation/artifact.json
+      hash: md5
+      md5: 2eb591ef9a337250d86e2e2fdc8481dd
+      size: 412
+    - path: artifacts/dvc/data_transformation/training_manifest.yaml
+      hash: md5
+      md5: 6b905de1ed34789182dadc6598452511
+      size: 641
