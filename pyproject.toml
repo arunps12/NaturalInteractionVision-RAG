@@ -1,21 +1,63 @@
 [project]
 name = "visionllm-interactionanalysis"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "End-to-end vision + LLM reasoning for child-caregiver interaction analysis"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Arun Prakash Singh", email = "arunps@uio.no"}]
+
 dependencies = [
     "dagshub>=0.6.4",
+    "fastapi>=0.115.0",
     "kagglehub>=0.3.13",
-    "matplotlib>=3.10.8",
+    "matplotlib>=3.10.0",
     "mlflow<2.17.0",
-    "numpy>=2.2.6",
-    "opencv-python-headless>=4.11.0.86",
+    "numpy>=2.2.0",
+    "opencv-python-headless>=4.11.0",
     "optuna>=4.6.0",
-    "pandas>=2.3.3",
-    "python-dotenv>=1.2.1",
-    "pyyaml>=6.0.3",
-    "torch>=2.9.1",
-    "torchvision>=0.24.1",
-    "tqdm>=4.67.1",
+    "pandas>=2.3.0",
+    "pydantic>=2.10.0",
+    "python-dotenv>=1.2.0",
+    "python-multipart>=0.0.18",
+    "pyyaml>=6.0.0",
+    "torch>=2.5.0",
+    "torchvision>=0.20.0",
+    "tqdm>=4.67.0",
+    "uvicorn>=0.34.0",
 ]
+
+[project.optional-dependencies]
+llm = [
+    "transformers>=4.47.0",
+    "bitsandbytes>=0.45.0",
+    "accelerate>=1.2.0",
+    "Pillow>=11.0.0",
+]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+visionllm = "main:main"
+
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

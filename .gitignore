@@ -209,4 +209,15 @@ __marimo__/
 #directory 
 data/
 artifacts/
+*.bak
+
+# Model checkpoints
+*.pt
+*.pth
+
+# Logs (keep structure, ignore content)
+*.log
+
+# Large binary docs
+*.docs
 
