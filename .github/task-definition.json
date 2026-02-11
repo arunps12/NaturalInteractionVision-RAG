@@ -1,0 +1,33 @@
+{
+  "family": "visionllm-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "4096",
+  "memory": "16384",
+  "executionRoleArn": "arn:aws:iam::role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "visionllm",
+      "image": "PLACEHOLDER",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "VISIONLLM_CHECKPOINT", "value": "/app/models/fasterrcnn_best.pt" },
+        { "name": "VISIONLLM_NUM_CLASSES", "value": "81" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/visionllm",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "visionllm"
+        }
+      }
+    }
+  ]
+}
