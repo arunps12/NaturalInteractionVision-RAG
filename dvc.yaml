@@ -11,7 +11,7 @@
 stages:
   # ── Stage 1: Data Ingestion ──────────────────────────────────────
   data_ingestion:
-    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_ingestion
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages data_ingestion
     deps:
       - src/visionllm_interactionanalysis/detection/data_ingestion.py
       - src/visionllm_interactionanalysis/config/settings.py
@@ -27,7 +27,7 @@ stages:
 
   # ── Stage 2: Data Validation ─────────────────────────────────────
   data_validation:
-    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_validation
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages data_validation
     deps:
       - src/visionllm_interactionanalysis/detection/data_validation.py
       - artifacts/dvc/data_ingestion/artifact.json
@@ -43,7 +43,7 @@ stages:
 
   # ── Stage 3: Data Transformation ─────────────────────────────────
   data_transformation:
-    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_transformation
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages data_transformation
     deps:
       - src/visionllm_interactionanalysis/detection/data_transformation.py
       - artifacts/dvc/data_ingestion/artifact.json
@@ -58,7 +58,7 @@ stages:
 
   # ── Stage 4: Model Training ─────────────────────────────────────
   model_training:
-    cmd: python -m visionllm_interactionanalysis.pipeline.stages model_training
+    cmd: .venv/bin/python -m visionllm_interactionanalysis.pipeline.stages model_training
     deps:
       - src/visionllm_interactionanalysis/detection/model_trainer.py
       - artifacts/dvc/data_transformation/artifact.json
