@@ -11,6 +11,7 @@ DATASET_NAME: str = os.environ.get("VISIONLLM_DATASET_NAME", "awsaf49/coco-2017-
 ARTIFACTS_DIR: str = os.environ.get("VISIONLLM_ARTIFACTS_DIR", "artifacts")
 CONFIGS_DIR: str = os.environ.get("VISIONLLM_CONFIGS_DIR", "configs")
 PIPELINE_NAME: str = "visionllm_interaction_pipeline"
+DVC_RUN_DIR: str = os.environ.get("VISIONLLM_DVC_RUN_DIR", os.path.join(ARTIFACTS_DIR, "dvc"))
 
 # ── Data staging root (configurable — no hardcoded /scratch) ─────────
 DATA_ROOT: str = os.environ.get(

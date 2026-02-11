@@ -22,6 +22,16 @@ def main() -> None:
     # ── train ─────────────────────────────────────────────────────
     sub.add_parser("train", help="Run the full training pipeline (Stages 1-4)")
 
+    # ── dvc ───────────────────────────────────────────────────────
+    dvc_p = sub.add_parser("dvc", help="Run a single pipeline stage (DVC mode)")
+    dvc_p.add_argument(
+        "stage",
+        nargs="?",
+        choices=["data_ingestion", "data_validation", "data_transformation", "model_training"],
+        default=None,
+        help="Stage to run. Omit to run all via 'dvc repro'.",
+    )
+
     # ── predict ───────────────────────────────────────────────────
     pred = sub.add_parser("predict", help="Run prediction on a single image")
     pred.add_argument("--image", required=True)
@@ -41,6 +51,14 @@ def main() -> None:
     if args.command == "train":
         from visionllm_interactionanalysis.pipeline.training_pipeline import run_training_pipeline
         run_training_pipeline()
+
+    elif args.command == "dvc":
+        if args.stage:
+            from visionllm_interactionanalysis.pipeline.stages import _STAGES
+            _STAGES[args.stage]()
+        else:
+            import subprocess
+            sys.exit(subprocess.call(["dvc", "repro"]))
 
     elif args.command == "predict":
         from visionllm_interactionanalysis.pipeline.prediction_pipeline import main as pred_main

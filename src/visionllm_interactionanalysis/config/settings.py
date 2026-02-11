@@ -12,14 +12,22 @@ from visionllm_interactionanalysis.config import constants as C
 
 # ── Pipeline root ────────────────────────────────────────────────────
 class PipelineConfig(BaseModel):
-    """Top-level config that stamps a run with a timestamp."""
+    """Top-level config that stamps a run with a timestamp.
+
+    For DVC mode (fixed output paths), pass ``run_dir`` directly
+    to skip the timestamp-based directory.
+    """
 
     pipeline_name: str = C.PIPELINE_NAME
     artifacts_dir: str = C.ARTIFACTS_DIR
     timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%m_%d_%Y_%H_%M_%S"))
+    run_dir: str | None = None  # When set, overrides artifacts_dir/timestamp
 
     @property
-    def run_dir(self) -> str:
+    def resolved_run_dir(self) -> str:
+        """Return the effective run directory."""
+        if self.run_dir is not None:
+            return self.run_dir
         return os.path.join(self.artifacts_dir, self.timestamp)
 
 
@@ -45,7 +53,7 @@ class DataIngestionConfig(BaseModel):
 
     @classmethod
     def from_pipeline(cls, pipeline: PipelineConfig, **overrides) -> DataIngestionConfig:
-        stage_dir = os.path.join(pipeline.run_dir, C.DATA_INGESTION_DIR)
+        stage_dir = os.path.join(pipeline.resolved_run_dir, C.DATA_INGESTION_DIR)
         return cls(
             stage_dir=stage_dir,
             manifest_file=os.path.join(stage_dir, C.DATA_INGESTION_MANIFEST),
@@ -67,7 +75,7 @@ class DataValidationConfig(BaseModel):
 
     @classmethod
     def from_pipeline(cls, pipeline: PipelineConfig, **overrides) -> DataValidationConfig:
-        stage_dir = os.path.join(pipeline.run_dir, C.DATA_VALIDATION_DIR)
+        stage_dir = os.path.join(pipeline.resolved_run_dir, C.DATA_VALIDATION_DIR)
         return cls(
             stage_dir=stage_dir,
             report_file=os.path.join(stage_dir, C.VALIDATION_REPORT),
@@ -87,7 +95,7 @@ class DataTransformationConfig(BaseModel):
 
     @classmethod
     def from_pipeline(cls, pipeline: PipelineConfig, **overrides) -> DataTransformationConfig:
-        stage_dir = os.path.join(pipeline.run_dir, C.DATA_TRANSFORMATION_DIR)
+        stage_dir = os.path.join(pipeline.resolved_run_dir, C.DATA_TRANSFORMATION_DIR)
         ann_dir = os.path.join(stage_dir, "annotations")
         return cls(
             stage_dir=stage_dir,
@@ -112,7 +120,7 @@ class ModelTrainerConfig(BaseModel):
 
     @classmethod
     def from_pipeline(cls, pipeline: PipelineConfig, **overrides) -> ModelTrainerConfig:
-        stage_dir = os.path.join(pipeline.run_dir, C.MODEL_TRAINER_DIR)
+        stage_dir = os.path.join(pipeline.resolved_run_dir, C.MODEL_TRAINER_DIR)
         return cls(
             stage_dir=stage_dir,
             report_file=os.path.join(stage_dir, C.TRAINING_REPORT),

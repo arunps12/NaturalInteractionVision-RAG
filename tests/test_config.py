@@ -12,7 +12,12 @@ from visionllm_interactionanalysis.config import (
 def test_pipeline_config_creates_run_dir():
     cfg = PipelineConfig()
     assert cfg.timestamp
-    assert cfg.run_dir.endswith(cfg.timestamp)
+    assert cfg.resolved_run_dir.endswith(cfg.timestamp)
+
+
+def test_pipeline_config_fixed_run_dir():
+    cfg = PipelineConfig(run_dir="/tmp/fixed_run")
+    assert cfg.resolved_run_dir == "/tmp/fixed_run"
 
 
 def test_stage_configs_from_pipeline():

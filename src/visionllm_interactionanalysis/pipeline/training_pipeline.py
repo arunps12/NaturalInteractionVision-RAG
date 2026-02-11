@@ -27,7 +27,7 @@ def run_training_pipeline() -> None:
 
     logger.info("=== VisionLLM Training Pipeline Started ===")
     pipeline = PipelineConfig()
-    logger.info("Run directory: %s", pipeline.run_dir)
+    logger.info("Run directory: %s", pipeline.resolved_run_dir)
 
     # Stage 1: Data Ingestion
     ing_cfg = DataIngestionConfig.from_pipeline(pipeline)

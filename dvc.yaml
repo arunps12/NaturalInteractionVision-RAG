@@ -1,0 +1,76 @@
+# ====================================================================
+# DVC Pipeline Definition
+# ====================================================================
+# Run the full pipeline:   dvc repro
+# Run a single stage:      dvc repro <stage_name>
+# Check what would run:    dvc status
+#
+# DVC skips stages whose deps / params / outs have not changed.
+# ====================================================================
+
+stages:
+  # ── Stage 1: Data Ingestion ──────────────────────────────────────
+  data_ingestion:
+    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_ingestion
+    deps:
+      - src/visionllm_interactionanalysis/detection/data_ingestion.py
+      - src/visionllm_interactionanalysis/config/settings.py
+      - src/visionllm_interactionanalysis/config/constants.py
+    params:
+      - data.dataset_name
+      - data.ingestion_mode
+    outs:
+      - artifacts/dvc/data_ingestion/artifact.json:
+          cache: false
+      - artifacts/dvc/data_ingestion/data_manifest.yaml:
+          cache: false
+
+  # ── Stage 2: Data Validation ─────────────────────────────────────
+  data_validation:
+    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_validation
+    deps:
+      - src/visionllm_interactionanalysis/detection/data_validation.py
+      - artifacts/dvc/data_ingestion/artifact.json
+      - configs/schema.yaml
+    params:
+      - data.require_val
+      - validation
+    outs:
+      - artifacts/dvc/data_validation/artifact.json:
+          cache: false
+      - artifacts/dvc/data_validation/data_validation_report.yaml:
+          cache: false
+
+  # ── Stage 3: Data Transformation ─────────────────────────────────
+  data_transformation:
+    cmd: python -m visionllm_interactionanalysis.pipeline.stages data_transformation
+    deps:
+      - src/visionllm_interactionanalysis/detection/data_transformation.py
+      - artifacts/dvc/data_ingestion/artifact.json
+      - artifacts/dvc/data_validation/artifact.json
+    outs:
+      - artifacts/dvc/data_transformation/artifact.json:
+          cache: false
+      - artifacts/dvc/data_transformation/training_manifest.yaml:
+          cache: false
+      - artifacts/dvc/data_transformation/annotations:
+          cache: false
+
+  # ── Stage 4: Model Training ─────────────────────────────────────
+  model_training:
+    cmd: python -m visionllm_interactionanalysis.pipeline.stages model_training
+    deps:
+      - src/visionllm_interactionanalysis/detection/model_trainer.py
+      - artifacts/dvc/data_transformation/artifact.json
+      - artifacts/dvc/data_transformation/training_manifest.yaml
+      - configs/model.yaml
+    params:
+      - model
+      - training
+      - hpo
+    outs:
+      - artifacts/dvc/model_training/artifact.json:
+          cache: false
+    metrics:
+      - artifacts/dvc/model_training/training_report.yaml:
+          cache: false

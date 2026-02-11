@@ -1,0 +1,52 @@
+# ====================================================================
+# DVC Pipeline Parameters
+# ====================================================================
+# DVC tracks this file and re-runs stages when their tracked params
+# change.  Keys here mirror configs/model.yaml but are the "source of
+# truth" for DVC caching decisions.
+# ====================================================================
+
+# ── Data ─────────────────────────────────────────────────────────────
+data:
+  dataset_name: "awsaf49/coco-2017-dataset"
+  ingestion_mode: "register"
+  require_val: true
+
+# ── Validation policy ────────────────────────────────────────────────
+validation:
+  drop_invalid_bbox: true
+  max_invalid_bbox_allowed: 100
+
+# ── Model architecture ──────────────────────────────────────────────
+model:
+  type: "fasterrcnn_resnet50_fpn"
+  weights: "DEFAULT"
+  num_classes: 81
+
+# ── Training ─────────────────────────────────────────────────────────
+training:
+  seed: 42
+  epochs: 1
+  device: "auto"
+  num_workers: 4
+  pin_memory: true
+  optimizer:
+    lr: 0.0001
+    weight_decay: 0.0
+  dataloader:
+    batch_size: 4
+  debug:
+    enabled: false
+    max_train_images: null
+    max_val_images: null
+
+# ── HPO ──────────────────────────────────────────────────────────────
+hpo:
+  enabled: true
+  n_trials: 5
+  timeout_seconds: null
+  sampler_seed: 42
+  search_space:
+    batch_size: [2, 4]
+    lr_low: 0.00001
+    lr_high: 0.001
